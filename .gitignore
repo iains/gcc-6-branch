@@ -1,0 +1,8 @@
+CVS
+.svn
+
+autom4te.cache
+*~
+
+# saved patches
+PATCHES
