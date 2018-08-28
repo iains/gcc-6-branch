@@ -1,4 +1,21 @@
 	Backport from mainline
+	2018-08-18  Iain Sandoe  <iain@sandoe.co.uk>
+
+	* config/darwin.c (darwin_override_options): If -gsplit-dwarf is set,
+	emit a diagnostic that it is not supported and reset the option.
+	* config/darwin.h (DRIVER_SELF_SPECS): Note that gsplit-dwarf is not
+	supported and consume the option.  (ASM_FINAL_SPEC): New.
+
+	Backport from mainline
+	2018-08-15  Iain Sandoe  <iain@sandoe.co.uk>
+
+	PR target/81685
+	* config/darwin.h: (DEBUG_STR_OFFSETS_SECTION, DEBUG_LOCLISTS_SECTION,
+	DEBUG_RNGLISTS_SECTION) new macros.  (DEBUG_PUBNAMES_SECTION,
+	DEBUG_PUBTYPES_SECTION) update to include GNU variant.
+
+	Backport from mainline
+
 	2018-08-22  Iain Sandoe  <iain@sandoe.co.uk>
 
 	PR bootstrap/81033
