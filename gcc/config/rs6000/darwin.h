@@ -382,6 +382,7 @@
   do \
     { \
       DARWIN_REGISTER_TARGET_PRAGMAS(); \
+      targetm.target_option.pragma_parse = rs6000_pragma_target_parse; \
       targetm.resolve_overloaded_builtin = altivec_resolve_overloaded_builtin; \
     } \
   while (0)
