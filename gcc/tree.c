@@ -13129,11 +13129,7 @@ verify_type_variant (const_tree t, tree tv)
     {
       verify_variant_match (TYPE_SIZE);
       verify_variant_match (TYPE_MODE);
-      if (TYPE_SIZE_UNIT (t) != TYPE_SIZE_UNIT (tv)
-	  /* FIXME: ideally we should compare pointer equality, but java FE
-	     produce variants where size is INTEGER_CST of different type (int
-	     wrt size_type) during libjava biuld.  */
-	  && !operand_equal_p (TYPE_SIZE_UNIT (t), TYPE_SIZE_UNIT (tv), 0))
+      if (TYPE_SIZE_UNIT (t) != TYPE_SIZE_UNIT (tv))
 	{
 	  error ("type variant has different TYPE_SIZE_UNIT");
 	  debug_tree (tv);
@@ -13771,9 +13767,7 @@ verify_type (const_tree t)
 	  debug_tree (TYPE_BINFO (t));
 	  error_found = true;
 	}
-      /* FIXME: Java builds invalid empty binfos that do not have
-         TREE_TYPE set.  */
-      else if (TREE_TYPE (TYPE_BINFO (t)) != TYPE_MAIN_VARIANT (t) && 0)
+      else if (TREE_TYPE (TYPE_BINFO (t)) != TYPE_MAIN_VARIANT (t))
 	{
 	  error ("TYPE_BINFO type is not TYPE_MAIN_VARIANT");
 	  debug_tree (TREE_TYPE (TYPE_BINFO (t)));

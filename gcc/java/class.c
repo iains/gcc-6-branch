@@ -368,8 +368,12 @@ make_class (void)
   tree type;
   type = make_node (RECORD_TYPE);
   /* Unfortunately we must create the binfo here, so that class
-     loading works.  */
-  TYPE_BINFO (type) = make_tree_binfo (0);
+     loading works.  This is a placeholder that will be overwritten
+     if/when we have the superclasses info.  */
+  tree binfo = make_tree_binfo (0);
+  BINFO_TYPE (binfo) = type;
+  BINFO_OFFSET (binfo) = size_zero_node;
+  TYPE_BINFO (type) = binfo;
   MAYBE_CREATE_TYPE_TYPE_LANG_SPECIFIC (type);
   TYPE_CATCH_CLASSES (type) = NULL;
   /* Push a dummy entry; we can't call make_catch_class_record here
@@ -457,7 +461,8 @@ gen_indirect_dispatch_tables (tree type)
 		    build_array_type (catch_class_type, 0));
     DECL_EXTERNAL (TYPE_CTABLE_DECL (type)) = 1;
     TREE_STATIC (TYPE_CTABLE_DECL (type)) = 1;
-    TREE_READONLY (TYPE_CTABLE_DECL (type)) = 1;
+    // Needs to be writebale by the Java linker.
+    TREE_READONLY (TYPE_CTABLE_DECL (type)) = 0;
     TREE_CONSTANT (TYPE_CTABLE_DECL (type)) = 1;
     DECL_IGNORED_P (TYPE_CTABLE_DECL (type)) = 1;
     pushdecl (TYPE_CTABLE_DECL (type));  
@@ -524,7 +529,12 @@ set_super_info (int access_flags, tree this_class,
     total_supers++;
 
   if (total_supers)
-    TYPE_BINFO (this_class) = make_tree_binfo (total_supers);
+    {
+      tree binfo = make_tree_binfo (total_supers);
+      BINFO_TYPE (binfo) = this_class;
+      BINFO_OFFSET (binfo) = size_zero_node;
+      TYPE_BINFO (this_class) = binfo;
+    }
   TYPE_VFIELD (this_class) = TYPE_VFIELD (object_type_node);
   if (super_class)
     {
@@ -2467,8 +2477,6 @@ layout_class (tree this_class)
 	push_super_field (this_class, maybe_super_class);
     }
 
-  layout_type (this_class);
-
   /* Also recursively load/layout any superinterfaces.  */
   if (TYPE_BINFO (this_class))
     {
@@ -2489,9 +2497,7 @@ layout_class (tree this_class)
 	}
     }
 
-  /* Convert the size back to an SI integer value.  */
-  TYPE_SIZE_UNIT (this_class) =
-    fold (convert (int_type_node, TYPE_SIZE_UNIT (this_class)));
+  layout_type (this_class);
 
   CLASS_BEING_LAIDOUT (this_class) = 0;
   class_list = TREE_CHAIN (class_list);
@@ -2968,7 +2974,8 @@ emit_symbol_table (tree name, tree the_table,
   the_table = build_decl (input_location,
 			  VAR_DECL, name, the_array_type);
   TREE_STATIC (the_table) = 1;
-  TREE_READONLY (the_table) = 1;  
+  // Must be writeable by the Java linker.
+  TREE_READONLY (the_table) = 0;
   rest_of_decl_compilation (the_table, 1, 0);
 
   return the_table;
@@ -3014,7 +3021,7 @@ emit_catch_table (tree this_class)
   DECL_INITIAL (table) = 
     build_constructor (array_type, TYPE_CATCH_CLASSES (this_class));
   TREE_STATIC (table) = 1;
-  TREE_READONLY (table) = 1;  
+  TREE_READONLY (table) = 0; // Written by Java linker.
   DECL_IGNORED_P (table) = 1;
   rest_of_decl_compilation (table, 1, 0);
   return table;

@@ -745,7 +745,7 @@ build_throw (tree exp)
 	{
 	  /* Declare void _Jv_Throw (void *).  */
 	  tree tmp;
-	  tmp = build_function_type_list (ptr_type_node,
+	  tmp = build_function_type_list (void_type_node,
 					  ptr_type_node, NULL_TREE);
 	  fn = push_throw_library_fn (fn, tmp);
 	}

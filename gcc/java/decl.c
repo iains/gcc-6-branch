@@ -559,39 +559,70 @@ java_init_decl_processing (void)
 
   /* Build common tree nodes, Java has an unsigned char.  */
   build_common_tree_nodes (false);
+  void_list_node = tree_cons (NULL_TREE, void_type_node, NULL_TREE);
+  pushdecl (build_decl (BUILTINS_LOCATION,
+			TYPE_DECL, get_identifier ("void"), void_type_node));
 
   /* ???  Now we continue and override some of the built types again
      with Java specific types.  As the above generated types are
      supposed to match the targets C ABI this isn't really the way
      to go and any Java specifics should _not_ use those global types
-     if the Java ABI does not match the C one.  */
+     if the Java ABI does not match the C one.  
+     OTOH, keep the same tree if that *is* correct for Java.  */
 
   byte_type_node = make_signed_type (8);
   pushdecl (build_decl (BUILTINS_LOCATION,
 			TYPE_DECL, get_identifier ("byte"), byte_type_node));
-  short_type_node = make_signed_type (16);
-  pushdecl (build_decl (BUILTINS_LOCATION,
-			TYPE_DECL, get_identifier ("short"), short_type_node));
-  int_type_node = make_signed_type (32);
-  pushdecl (build_decl (BUILTINS_LOCATION,
-			TYPE_DECL, get_identifier ("int"), int_type_node));
-  long_type_node = make_signed_type (64);
-  pushdecl (build_decl (BUILTINS_LOCATION,
-			TYPE_DECL, get_identifier ("long"), long_type_node));
 
   unsigned_byte_type_node = make_unsigned_type (8);
   pushdecl (build_decl (BUILTINS_LOCATION,
 			TYPE_DECL, get_identifier ("unsigned byte"),
 			unsigned_byte_type_node));
-  unsigned_short_type_node = make_unsigned_type (16);
+
+  if (SHORT_TYPE_SIZE == 16)
+    {
+      short_type_node = short_integer_type_node;
+      unsigned_short_type_node = short_unsigned_type_node;
+    }
+  else
+    {
+      short_type_node = make_signed_type (16);
+      unsigned_short_type_node = make_unsigned_type (16);
+    }
+  pushdecl (build_decl (BUILTINS_LOCATION,
+			TYPE_DECL, get_identifier ("short"), short_type_node));
   pushdecl (build_decl (BUILTINS_LOCATION,
 			TYPE_DECL, get_identifier ("unsigned short"),
 			unsigned_short_type_node));
-  unsigned_int_type_node = make_unsigned_type (32);
+
+  if (INT_TYPE_SIZE == 32)
+    {
+      int_type_node = integer_type_node;
+      unsigned_int_type_node = unsigned_type_node;
+    }
+  else
+    {
+      int_type_node = make_signed_type (32);
+      unsigned_int_type_node = make_unsigned_type (32);
+    }
+  pushdecl (build_decl (BUILTINS_LOCATION,
+			TYPE_DECL, get_identifier ("int"), int_type_node));
   pushdecl (build_decl (BUILTINS_LOCATION,
 			TYPE_DECL, get_identifier ("unsigned int"),
 			unsigned_int_type_node));
-  unsigned_long_type_node = make_unsigned_type (64);
+
+  if (LONG_TYPE_SIZE == 64)
+    {
+      long_type_node = long_integer_type_node;
+      unsigned_long_type_node = long_unsigned_type_node;
+    }
+  else
+    {
+      long_type_node = make_signed_type (64);
+      unsigned_long_type_node = make_unsigned_type (64);
+    }
+  pushdecl (build_decl (BUILTINS_LOCATION,
+			TYPE_DECL, get_identifier ("long"), long_type_node));
   pushdecl (build_decl (BUILTINS_LOCATION,
 			TYPE_DECL, get_identifier ("unsigned long"),
 			unsigned_long_type_node));
@@ -613,12 +644,9 @@ java_init_decl_processing (void)
 
   long_zero_node = build_int_cst (long_type_node, 0);
 
-  pushdecl (build_decl (BUILTINS_LOCATION,
-			TYPE_DECL, get_identifier ("void"), void_type_node));
-
-  t = make_node (VOID_TYPE);
-  layout_type (t); /* Uses size_zero_node */
-  return_address_type_node = build_pointer_type (t);
+  //t = make_node (VOID_TYPE);
+  //layout_type (t); /* Uses size_zero_node */
+  return_address_type_node = ptr_type_node;
 
   char_type_node = make_unsigned_type (16);
   TYPE_STRING_FLAG (char_type_node) = 1;
@@ -642,19 +670,17 @@ java_init_decl_processing (void)
   promoted_boolean_type_node
     = push_promoted_type ("promoted_boolean", boolean_type_node);
 
-  float_type_node = make_node (REAL_TYPE);
-  TYPE_PRECISION (float_type_node) = 32;
+  // Java requires not only specific sizes, but also the IEEE754 is used.
+  // We can check the size (but not the implementation scheme).
+  gcc_checking_assert (TYPE_PRECISION (float_type_node) == 32);
   pushdecl (build_decl (BUILTINS_LOCATION,
 			TYPE_DECL, get_identifier ("float"),
                         float_type_node));
-  layout_type (float_type_node);
 
-  double_type_node = make_node (REAL_TYPE);
-  TYPE_PRECISION (double_type_node) = 64;
+  gcc_checking_assert (TYPE_PRECISION (double_type_node) == 64);
   pushdecl (build_decl (BUILTINS_LOCATION,
 			TYPE_DECL, get_identifier ("double"),
                         double_type_node));
-  layout_type (double_type_node);
 
   float_zero_node = build_real (float_type_node, dconst0);
   double_zero_node = build_real (double_type_node, dconst0);
@@ -956,8 +982,6 @@ java_init_decl_processing (void)
   FINISH_RECORD (method_type_node);
   build_decl (BUILTINS_LOCATION,
 	      TYPE_DECL, get_identifier ("Method"), method_type_node);
-
-  end_params_node = tree_cons (NULL_TREE, void_type_node, NULL_TREE);
 
   t = build_function_type_list (ptr_type_node, class_ptr_type, NULL_TREE);
   alloc_object_node = add_builtin_function ("_Jv_AllocObject", t,
@@ -1770,7 +1794,7 @@ start_java_method (tree fndecl)
 
   ptr = &DECL_ARGUMENTS (fndecl);
   for (tem = TYPE_ARG_TYPES (TREE_TYPE (fndecl)), i = 0;
-       tem != end_params_node; tem = TREE_CHAIN (tem), i++)
+       tem != void_list_node; tem = TREE_CHAIN (tem), i++)
     {
       tree parm_name = NULL_TREE, parm_decl;
       tree parm_type = TREE_VALUE (tem);
